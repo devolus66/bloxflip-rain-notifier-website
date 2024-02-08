@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloxFlip Rain</title>
+    <style>
+        body {
+            background-color: #1f1f1f;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 25vh;
+            justify-content: center;
+            font-size: 14px;
+            overflow: hidden;
+        }
+
+        input[type="text"] {
+            width: calc(50% - 20px);
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 15px 30px;
+            background-color: #000000;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+
+        button:hover {
+            background-color: #000000;
+        }
+
+        .footer {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .success {
+            color: #00ff00;
+            font-weight: bold;
+            margin-bottom: 10px;
+            animation: fadeOut 5s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>Bloxflip Rain Notifications</h2>
+    <label for="webhookUrl">Enter Webhook URL:</label><br>
+    <input type="text" id="webhookUrl" name="webhookUrl"><br><br>
+
+    <div class="button-container">
+        <button onclick="executeWebhook()">Setup Webhook</button>
+        <button onclick="testWebhook()">Test if webhook is working</button>
+    </div>
+
+    <div id="successMessage" class="success" style="display: none; text-align: center;">Webhook successfully set up!</div>
+
+    <div class="footer">
+        <p id="footerMessage" style="font-size: 16px;">Made by devolus & AI</p>
+    </div>
+
+    <script>
+        let raining = false;
+        let webhookURL = '';
+
+        async function executeWebhook() {
+            webhookURL = document.getElementById('webhookUrl').value;
+            document.getElementById('successMessage').style.display = 'none';
+
+            setInterval(checkForRain, 1500);
+            document.getElementById('successMessage').style.display = 'block';
+            setTimeout(hideSuccessMessage, 5000);
+        }
+
+        function hideSuccessMessage() {
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        async function checkForRain() {
+            try {
+                let history = await fetch('https://api.bloxflip.com/chat/history');
+                let historyJson = await history.json();
+
+                if (historyJson.rain.active && !raining) {
+                    raining = true;
+                    let rainAmount = historyJson.rain.prize;
+                    let rainDuration = historyJson.rain.duration / 60000;
+                    let rainHost = historyJson.rain.host;
+
+                    await sendWebhookNotification(`# ${rainHost} Is hosting the RAIN! @everyone`);
+                    await sendWebhookNotification(`The rain amount is **${rainAmount}** with duration of **${rainDuration}m** @ https://bloxflip.com/`);
+                } else if (!historyJson.rain.active && raining) {
+                    raining = false;
+                }
+            } catch (error) {
+                console.error('Error fetching or processing data:', error);
+            }
+        }
+
+        async function sendWebhookNotification(message) {
+            try {
+                await fetch(webhookURL, {
+                    method: 'POST',  
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: message }),
+                });
+                console.log('Webhook sent:', message);
+            } catch (error) {
+                console.error('Error sending webhook request:', error);
+            }
+        }
+
+        async function testWebhook() {
+            webhookURL = document.getElementById('webhookUrl').value;
+            try {
+                await fetch(webhookURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: 'The webhook is working' }),
+                });
+                console.log('Test webhook sent');
+            } catch (error) {
+                console.error('Error sending test webhook:', error);
+            }
+        }
+    </script>
+</body>
+</html>
